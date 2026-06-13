@@ -2,7 +2,7 @@ mod ffmpeg;
 use crate::ffmpeg::EncodeParams;
 use clap::Parser;
 use eframe::egui;
-use ffmpeg::{AudioStream, Codec, FFmpeg};
+use ffmpeg::{AudioStream, Codec, FFmpeg, Resolution};
 use hide_console;
 use std::{path::PathBuf, process::exit};
 use strum::IntoEnumIterator;
@@ -21,7 +21,7 @@ fn main() -> eframe::Result {
 
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([720.0, 480.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([768.0, 480.0]),
         ..Default::default()
     };
 
@@ -42,6 +42,7 @@ struct Gui {
     ffmpeg: FFmpeg,
     selected_audio_stream: u32,
     selected_codec: u32,
+    selected_resolution: u32,
     picked_path: Option<String>,
     start_time: f32,
     end_time: f32,
@@ -80,6 +81,7 @@ impl Default for Gui {
             ffmpeg: ffmpeg.clone(),
             selected_audio_stream: 0,
             selected_codec: Codec::H264 as u32,
+            selected_resolution: Resolution::FHD as u32,
             start_time: 0.0,
             end_time: ffmpeg.video_duration as f32,
         }
@@ -122,7 +124,10 @@ impl eframe::App for Gui {
 
             // Some prerequisites in case there isn't a video loaded
             ui.separator();
-            ui.label(egui::RichText::new("2. Pick and audio stream and a video codec").strong());
+            ui.label(
+                egui::RichText::new("2. Pick an audio stream, a video codec and a resolution")
+                    .strong(),
+            );
             let mut audio_stream_str = "None".to_string();
             if self.audio_streams.len() != 0 {
                 audio_stream_str = format!(
@@ -158,6 +163,22 @@ impl eframe::App for Gui {
                                 &mut self.selected_codec,
                                 codec.clone() as u32,
                                 format!("{}", codec.pretty_str()),
+                            );
+                        }
+                    });
+
+                // Resolution selector
+                let resolution: Resolution = num::FromPrimitive::from_u32(self.selected_resolution)
+                    .expect("Codec not found");
+                let resolution_str = resolution.pretty_str();
+                egui::ComboBox::from_label("Target resolution")
+                    .selected_text(resolution_str)
+                    .show_ui(ui, |ui| {
+                        for resolution in Resolution::iter() {
+                            ui.selectable_value(
+                                &mut self.selected_resolution,
+                                resolution.clone() as u32,
+                                format!("{}", resolution.pretty_str()),
                             );
                         }
                     });
@@ -207,6 +228,8 @@ impl eframe::App for Gui {
                         audio_stream: self.selected_audio_stream,
                         codec: num::FromPrimitive::from_u32(self.selected_codec)
                             .expect("Codec not found!"),
+                        resolution: num::FromPrimitive::from_u32(self.selected_resolution)
+                            .expect("Resolution not found!"),
                     };
 
                     self.ffmpeg.encode(params);

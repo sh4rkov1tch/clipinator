@@ -29,6 +29,7 @@ pub struct EncodeParams {
     pub output_path: PathBuf,
     pub audio_stream: u32,
     pub codec: Codec,
+    pub resolution: Resolution,
 }
 
 #[derive(Clone, FromPrimitive, EnumIter)]
@@ -61,6 +62,37 @@ impl Codec {
             Codec::H264amf => "H264 (AMF)",
             Codec::HEVCamf => "HEVC (AMF)",
             Codec::AV1amf => "AV1 (AMF)",
+        }
+    }
+}
+
+#[derive(Clone, FromPrimitive, EnumIter)]
+pub enum Resolution {
+    SD,
+    HDReady,
+    FHD,
+    QHD,
+    UHD,
+}
+
+impl Resolution {
+    pub fn as_args(&self) -> [&str; 2] {
+        match self {
+            Resolution::SD => ["-vf", "scale=854:480"],
+            Resolution::HDReady => ["-vf", "scale=1280:720"],
+            Resolution::FHD => ["-vf", "scale=1920:1080"],
+            Resolution::QHD => ["-vf", "scale=2560:1440"],
+            Resolution::UHD => ["-vf", "scale=3840:2160"],
+        }
+    }
+
+    pub fn pretty_str(&self) -> &'static str {
+        match self {
+            Resolution::SD => "480p",
+            Resolution::HDReady => "720p",
+            Resolution::FHD => "1080p",
+            Resolution::QHD => "1440p",
+            Resolution::UHD => "2160p",
         }
     }
 }
@@ -151,9 +183,10 @@ impl FFmpeg {
             let _ = Command::new(ffmpeg_path.as_str())
                 .args(["-v", "quiet"])
                 .args(["-i", &video_path.as_str()])
-                .args(["-c:v", &params.codec.as_str()])
                 .args(["-ss", format!("{}", &params.start_time).as_str()])
                 .args(["-to", format!("{}", &params.end_time).as_str()])
+                .args(["-c:v", &params.codec.as_str()])
+                .args(params.resolution.as_args())
                 .args([
                     "-map",
                     "0:v:0",
