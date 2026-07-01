@@ -21,7 +21,7 @@ fn main() -> eframe::Result {
 
     env_logger::init(); // Log to stderr (if you run with `RUST_LOG=debug`).
     let options = eframe::NativeOptions {
-        viewport: egui::ViewportBuilder::default().with_inner_size([768.0, 480.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([720.0, 500.0]),
         ..Default::default()
     };
 
@@ -46,6 +46,7 @@ struct Gui {
     picked_path: Option<String>,
     start_time: f32,
     end_time: f32,
+    framerate: u32,
 }
 
 impl Default for Gui {
@@ -84,6 +85,7 @@ impl Default for Gui {
             selected_resolution: Resolution::FHD as u32,
             start_time: 0.0,
             end_time: ffmpeg.video_duration as f32,
+            framerate: 60,
         }
     }
 }
@@ -116,10 +118,7 @@ impl eframe::App for Gui {
 
             // Filename
             if let Some(picked_path) = &self.picked_path {
-                ui.horizontal(|ui| {
-                    ui.label("Video:");
-                    ui.monospace(picked_path);
-                });
+                ui.monospace(picked_path);
             }
 
             // Some prerequisites in case there isn't a video loaded
@@ -166,7 +165,9 @@ impl eframe::App for Gui {
                             );
                         }
                     });
+            });
 
+            ui.horizontal(|ui| {
                 // Resolution selector
                 let resolution: Resolution = num::FromPrimitive::from_u32(self.selected_resolution)
                     .expect("Codec not found");
@@ -179,6 +180,20 @@ impl eframe::App for Gui {
                                 &mut self.selected_resolution,
                                 resolution.clone() as u32,
                                 format!("{}", resolution.pretty_str()),
+                            );
+                        }
+                    });
+
+                // Framerate selector
+                let framerates: Vec<u32> = vec![24, 30, 60, 144, 180, 240];
+                egui::ComboBox::from_label("FPS")
+                    .selected_text(format!("{}", self.framerate))
+                    .show_ui(ui, |ui| {
+                        for framerate in framerates {
+                            ui.selectable_value(
+                                &mut self.framerate,
+                                framerate,
+                                format!("{}", framerate),
                             );
                         }
                     });
@@ -230,6 +245,7 @@ impl eframe::App for Gui {
                             .expect("Codec not found!"),
                         resolution: num::FromPrimitive::from_u32(self.selected_resolution)
                             .expect("Resolution not found!"),
+                        framerate: self.framerate,
                     };
 
                     self.ffmpeg.encode(params);

@@ -30,6 +30,7 @@ pub struct EncodeParams {
     pub audio_stream: u32,
     pub codec: Codec,
     pub resolution: Resolution,
+    pub framerate: u32,
 }
 
 #[derive(Clone, FromPrimitive, EnumIter)]
@@ -185,6 +186,7 @@ impl FFmpeg {
                 .args(["-i", &video_path.as_str()])
                 .args(["-ss", format!("{}", &params.start_time).as_str()])
                 .args(["-to", format!("{}", &params.end_time).as_str()])
+                .args(["-r", format!("{}", &params.framerate).as_str()])
                 .args(["-c:v", &params.codec.as_str()])
                 .args(params.resolution.as_args())
                 .args([
