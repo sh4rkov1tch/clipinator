@@ -185,7 +185,7 @@ impl eframe::App for Gui {
                     });
 
                 // Framerate selector
-                let framerates: Vec<u32> = vec![24, 30, 60, 144, 180, 240];
+                let framerates: Vec<u32> = vec![15, 30, 60, 120, 144, 180, 240];
                 egui::ComboBox::from_label("FPS")
                     .selected_text(format!("{}", self.framerate))
                     .show_ui(ui, |ui| {
