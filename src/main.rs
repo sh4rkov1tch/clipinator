@@ -4,7 +4,7 @@ use clap::Parser;
 use eframe::egui;
 use ffmpeg::{AudioStream, Codec, FFmpeg, Resolution};
 use hide_console;
-use std::{path::PathBuf, process::exit};
+use std::{fs::remove_file, path::PathBuf, process::exit};
 use strum::IntoEnumIterator;
 use win_msgbox;
 
@@ -47,6 +47,7 @@ struct Gui {
     start_time: f32,
     end_time: f32,
     framerate: u32,
+    volume: f32,
 }
 
 impl Default for Gui {
@@ -86,6 +87,7 @@ impl Default for Gui {
             start_time: 0.0,
             end_time: ffmpeg.video_duration as f32,
             framerate: 60,
+            volume: 1.0,
         }
     }
 }
@@ -124,8 +126,10 @@ impl eframe::App for Gui {
             // Some prerequisites in case there isn't a video loaded
             ui.separator();
             ui.label(
-                egui::RichText::new("2. Pick an audio stream, a video codec and a resolution")
-                    .strong(),
+                egui::RichText::new(
+                    "2. Pick an audio stream, a video codec, resolution and volume",
+                )
+                .strong(),
             );
             let mut audio_stream_str = "None".to_string();
             if self.audio_streams.len() != 0 {
@@ -199,6 +203,12 @@ impl eframe::App for Gui {
                     });
             });
 
+            // Volume adjustment
+            ui.horizontal(|ui| {
+                ui.label("Volume");
+                ui.add(egui::Slider::new(&mut self.volume, 0.0..=4.0));
+            });
+
             // Start and end time selectors
             ui.separator();
             ui.label(egui::RichText::new("3. Trim the video (time is in seconds)").strong());
@@ -236,6 +246,10 @@ impl eframe::App for Gui {
                     .add_filter("Video file", &["mp4", "mkv"])
                     .save_file()
                 {
+                    if path.exists() {
+                        // Delete file in case we want to overwrite it, otherwise ffmpeg refuses to run.
+                        remove_file(&path).expect("Couldn't delete existing file");
+                    }
                     let params = EncodeParams {
                         start_time: self.start_time as u32,
                         end_time: self.end_time as u32,
@@ -246,6 +260,7 @@ impl eframe::App for Gui {
                         resolution: num::FromPrimitive::from_u32(self.selected_resolution)
                             .expect("Resolution not found!"),
                         framerate: self.framerate,
+                        volume: self.volume,
                     };
 
                     self.ffmpeg.encode(params);

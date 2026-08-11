@@ -31,6 +31,7 @@ pub struct EncodeParams {
     pub codec: Codec,
     pub resolution: Resolution,
     pub framerate: u32,
+    pub volume: f32,
 }
 
 #[derive(Clone, FromPrimitive, EnumIter)]
@@ -195,6 +196,7 @@ impl FFmpeg {
                     "-map",
                     format!("0:a:{}", params.audio_stream).as_str(),
                 ])
+                .args(["-filter:a", format!("volume={}", params.volume).as_str()])
                 .arg(&params.output_path)
                 .output();
 
